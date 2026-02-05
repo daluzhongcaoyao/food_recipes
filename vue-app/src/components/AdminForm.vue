@@ -245,7 +245,7 @@ const deleteRecipe = async (id) => {
         />
       </div>
 
-      <ul class="flex flex-col gap-3">
+      <ul class="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-2">
         <li v-for="recipe in filteredRecipes" :key="recipe.id">
           <RecipeCard
             :recipe="recipe"
