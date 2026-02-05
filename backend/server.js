@@ -31,6 +31,7 @@ app.use(serve(path.join(__dirname, 'dist')));   // Serve frontend build
 
 app.use(koaBody({
     multipart: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     formidable: {
         uploadDir: UPLOAD_DIR,
         keepExtensions: true,
@@ -99,6 +100,66 @@ router.post('/api/recipes', async (ctx) => {
     writeData(recipes);
 
     ctx.body = newRecipe;
+});
+
+// PUT /api/recipes/:id - Update recipe
+router.put('/api/recipes/:id', async (ctx) => {
+    const { id } = ctx.params;
+    const { title, tags } = ctx.request.body;
+    const file = ctx.request.files ? ctx.request.files.image : null;
+
+    let recipes = readData();
+    const recipeIndex = recipes.findIndex(r => r.id === id);
+
+    if (recipeIndex === -1) {
+        ctx.status = 404;
+        ctx.body = { error: 'Recipe not found' };
+        return;
+    }
+
+    if (!title) {
+        ctx.status = 400;
+        ctx.body = { error: 'Title is required' };
+        return;
+    }
+
+    const recipe = recipes[recipeIndex];
+    let imagePath = recipe.image;
+
+    // Delete old image and save new one if provided
+    if (file) {
+        const oldPath = path.join(__dirname, 'public', recipe.image.replace(/^\//, ''));
+        if (fs.existsSync(oldPath)) {
+            try {
+                fs.unlinkSync(oldPath);
+            } catch (err) {
+                console.error('Failed to delete old image:', err);
+            }
+        }
+        imagePath = `/uploads/${path.basename(file.filepath)}`;
+    }
+
+    // Parse tags
+    let parsedTags = [];
+    if (typeof tags === 'string') {
+        try {
+            parsedTags = JSON.parse(tags);
+        } catch (e) {
+            parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+    } else if (Array.isArray(tags)) {
+        parsedTags = tags;
+    }
+
+    recipes[recipeIndex] = {
+        ...recipe,
+        title,
+        image: imagePath,
+        tags: parsedTags
+    };
+    writeData(recipes);
+
+    ctx.body = recipes[recipeIndex];
 });
 
 // DELETE /api/recipes/:id - Delete recipe and image

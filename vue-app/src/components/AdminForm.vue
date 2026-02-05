@@ -15,6 +15,7 @@ const tags = ref([])
 const file = ref(null)
 const previewUrl = ref(null)
 const isSubmitting = ref(false)
+const editingId = ref(null)
 
 const suggestedTags = computed(() => {
   if (!newTag.value) return []
@@ -50,33 +51,55 @@ const selectSuggestedTag = (tag) => {
   }
 }
 
+const editRecipe = (recipe) => {
+  editingId.value = recipe.id
+  title.value = recipe.title
+  tags.value = [...recipe.tags]
+  previewUrl.value = recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`
+  file.value = null
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+  title.value = ''
+  tags.value = []
+  file.value = null
+  previewUrl.value = null
+  newTag.value = ''
+}
+
 const handleSubmit = async () => {
-  if (!title.value || !file.value) {
-    alert('请填写标题并上传图片')
+  if (!title.value) {
+    alert('请填写标题')
+    return
+  }
+  if (!editingId.value && !file.value) {
+    alert('请上传图片')
     return
   }
 
   const formData = new FormData()
   formData.append('title', title.value)
-  // Send tags as JSON string
   formData.append('tags', JSON.stringify(tags.value))
-  formData.append('image', file.value)
+  if (file.value) {
+    formData.append('image', file.value)
+  }
 
   isSubmitting.value = true
   try {
-    await axios.post('http://localhost:3000/api/recipes', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    
-    // Reset form
-    title.value = ''
-    tags.value = []
-    file.value = null
-    previewUrl.value = null
-    newTag.value = ''
-    
+    if (editingId.value) {
+      await axios.put(`http://localhost:3000/api/recipes/${editingId.value}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } else {
+      await axios.post('http://localhost:3000/api/recipes', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    }
+
+    cancelEdit()
     emit('refresh')
-    alert('保存成功！')
+    alert(editingId.value ? '更新成功！' : '保存成功！')
   } catch (error) {
     console.error(error)
     alert('保存失败')
@@ -98,10 +121,12 @@ const deleteRecipe = async (id) => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+  <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 min-h-full">
     <!-- Form Section -->
-    <div>
-      <h2 class="text-xl font-bold mb-6">添加新食谱</h2>
+    <div class="flex flex-col py-8">
+      <h2 class="text-2xl font-bold mb-8 text-gray-800 text-center">
+        {{ editingId ? '编辑食谱' : '添加新食谱' }}
+      </h2>
       
       <div class="space-y-4">
         <!-- Image Upload -->
@@ -167,19 +192,26 @@ const deleteRecipe = async (id) => {
           </div>
         </div>
 
-        <button 
+        <button
           @click="handleSubmit"
           :disabled="isSubmitting"
           class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
         >
-          {{ isSubmitting ? '保存中...' : '保存食谱' }}
+          {{ isSubmitting ? '保存中...' : (editingId ? '更新食谱' : '保存食谱') }}
+        </button>
+        <button
+          v-if="editingId"
+          @click="cancelEdit"
+          class="w-full bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400 transition-colors"
+        >
+          取消编辑
         </button>
       </div>
     </div>
 
     <!-- Management List Section -->
-    <div class="border-t md:border-t-0 md:border-l pl-0 md:pl-8 pt-8 md:pt-0">
-      <h2 class="text-xl font-bold mb-6">已有食谱管理</h2>
+    <div class="border-t md:border-t-0 md:border-l border-gray-200 pl-0 md:pl-16 py-8 flex flex-col">
+      <h2 class="text-2xl font-bold mb-8 text-gray-800 text-center">已有食谱管理</h2>
       <ul class="divide-y">
         <li v-for="recipe in recipes" :key="recipe.id" class="py-3 flex justify-between items-center group">
           <div class="flex items-center gap-3 overflow-hidden">
@@ -189,12 +221,21 @@ const deleteRecipe = async (id) => {
             >
             <span class="truncate">{{ recipe.title }}</span>
           </div>
-          <button 
-            @click="deleteRecipe(recipe.id)"
-            class="text-red-500 text-sm hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            删除
-          </button>
+          <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              @click="editRecipe(recipe)"
+              class="text-blue-500 text-sm hover:text-blue-700"
+            >
+              编辑
+            </button>
+            <span class="text-gray-300">|</span>
+            <button
+              @click="deleteRecipe(recipe.id)"
+              class="text-red-500 text-sm hover:text-red-700"
+            >
+              删除
+            </button>
+          </div>
         </li>
       </ul>
     </div>

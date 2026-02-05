@@ -16,7 +16,13 @@
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
       "Bash(tree:*)",
-      "Bash(more:*)"
+      "Bash(more:*)",
+      "Bash(tasklist:*)",
+      "Bash(node:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(timeout:*)"
     ]
   }
 }
