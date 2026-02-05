@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    host: true, // 暴露到网络，让手机可访问
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

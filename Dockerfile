@@ -1,12 +1,4 @@
-# Stage 1: Build Frontend
-FROM node:18-alpine AS frontend-builder
-WORKDIR /app
-COPY vue-app/package*.json ./
-RUN npm install
-COPY vue-app/ .
-RUN npm run build
-
-# Stage 2: Setup Backend and Final Image
+# Final Image - Backend + Pre-built Frontend
 FROM node:18-alpine
 WORKDIR /app
 
@@ -17,8 +9,8 @@ RUN npm install --production
 # Copy backend code
 COPY backend/ .
 
-# Copy built frontend assets
-COPY --from=frontend-builder /app/dist ./dist
+# Copy locally built frontend assets (build on local machine first: cd vue-app && npm run build)
+COPY vue-app/dist ./dist
 
 # Create data directories
 RUN mkdir -p data public/uploads

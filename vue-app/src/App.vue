@@ -6,14 +6,22 @@ import RecipeList from './components/RecipeList.vue'
 import RecipeDetail from './components/RecipeDetail.vue'
 import AdminForm from './components/AdminForm.vue'
 import ImageViewer from './components/ImageViewer.vue'
+import MobileImageViewer from './components/MobileImageViewer.vue'
 
 const currentTab = ref('search') // 'search' or 'admin'
 const recipes = ref([])
 const selectedRecipe = ref(null)
 const selectedTags = ref([])
 const enlargedImageUrl = ref(null)
+const isMobile = ref(false)
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api'
+
+// Check if device is mobile
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 
 const fetchRecipes = async () => {
   try {
@@ -55,6 +63,14 @@ const openImage = (imageUrl) => {
   enlargedImageUrl.value = imageUrl
 }
 
+// Handle mobile recipe name click - show image fullscreen
+const handleMobileRecipeClick = (recipe) => {
+  const imageUrl = recipe.image.startsWith('http')
+    ? recipe.image
+    : `http://localhost:3000${recipe.image}`
+  openImage(imageUrl)
+}
+
 const closeImage = () => {
   enlargedImageUrl.value = null
 }
@@ -65,18 +81,62 @@ const handleKeydown = (e) => {
   }
 }
 
+const handleResize = () => {
+  checkMobile()
+}
+
 onMounted(() => {
   fetchRecipes()
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', handleResize)
+  checkMobile()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
 <template>
-  <div class="h-screen w-screen flex bg-gray-50 overflow-hidden">
+  <!-- Mobile Layout -->
+  <div v-if="isMobile" class="h-screen w-screen flex flex-col bg-gray-50">
+    <!-- Top Search Bar -->
+    <div class="flex-shrink-0 bg-white p-3 shadow-sm">
+      <SearchBar
+        :all-tags="allTags"
+        :selected-tags="selectedTags"
+        @add-tag="addTagFilter"
+        @remove-tag="removeTagFilter"
+      />
+    </div>
+
+    <!-- Recipe Name List -->
+    <div class="flex-1 overflow-y-auto p-2">
+      <div v-if="filteredRecipes.length === 0" class="p-4 text-center text-gray-500 text-sm">
+        没有找到食谱
+      </div>
+      <ul v-else class="flex flex-col gap-2">
+        <li
+          v-for="recipe in filteredRecipes"
+          :key="recipe.id"
+          @click="handleMobileRecipeClick(recipe)"
+          class="bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        >
+          <h3 class="text-sm font-medium text-gray-800">{{ recipe.title }}</h3>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Image Viewer -->
+    <MobileImageViewer
+      :image-url="enlargedImageUrl"
+      @close="closeImage"
+    />
+  </div>
+
+  <!-- Desktop Layout -->
+  <div v-else class="h-screen w-screen flex bg-gray-50 overflow-hidden">
     <!-- Left Sidebar: Navigation -->
     <nav class="w-20 bg-white shadow-md flex flex-col items-center py-6 z-20 gap-6 flex-shrink-0">
       <div class="mb-2">
@@ -85,10 +145,10 @@ onUnmounted(() => {
           <span class="text-white font-bold text-xl">食</span>
         </div>
       </div>
-      
-      <button 
+
+      <button
         @click="currentTab = 'search'"
-        :class="['w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-200', 
+        :class="['w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-200',
           currentTab === 'search' ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600']"
         title="查询模式"
       >
@@ -98,9 +158,9 @@ onUnmounted(() => {
         <span class="text-[10px] font-medium">查询</span>
       </button>
 
-      <button 
+      <button
         @click="currentTab = 'admin'"
-        :class="['w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-200', 
+        :class="['w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-200',
           currentTab === 'admin' ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600']"
         title="管理模式"
       >
@@ -115,14 +175,14 @@ onUnmounted(() => {
     <!-- Main Content Area -->
     <main class="flex-1 overflow-hidden p-4">
       <div class="h-full w-full max-w-[1600px] mx-auto grid grid-cols-12 gap-4">
-        
+
         <!-- Search Mode Layout -->
         <template v-if="currentTab === 'search'">
           <!-- Left Sidebar: Search & List (3 cols) -->
           <div class="col-span-12 md:col-span-4 lg:col-span-3 flex flex-col h-full overflow-hidden gap-3">
             <div class="flex-shrink-0 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-              <SearchBar 
-                :all-tags="allTags" 
+              <SearchBar
+                :all-tags="allTags"
                 :selected-tags="selectedTags"
                 @add-tag="addTagFilter"
                 @remove-tag="removeTagFilter"
@@ -151,10 +211,10 @@ onUnmounted(() => {
         <!-- Admin Mode Layout -->
         <template v-else>
           <div class="col-span-12 bg-white rounded-lg shadow h-full overflow-y-auto p-6">
-            <AdminForm 
-              :all-tags="allTags" 
+            <AdminForm
+              :all-tags="allTags"
               :recipes="recipes"
-              @refresh="fetchRecipes" 
+              @refresh="fetchRecipes"
             />
           </div>
         </template>

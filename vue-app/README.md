@@ -1,62 +1,114 @@
-你是一名全栈开发专家，请帮我编写一个轻量级的“食谱查询与管理系统”。
-目标环境是 1核1G 的 Ubuntu VPS，使用 Docker Compose 部署。
-为了节省资源，不使用传统数据库，数据存储在本地 JSON 文件中。
+# 食谱管理系统
 
-### 技术栈要求
-- **前端**：Vue 3 (Composition API, <script setup>) + Vite + Tailwind CSS。
-- **后端**：Node.js + Koa (轻量级框架)。
-- **数据**：使用本地 `data/recipes.json` 文件存储数据。
-- **图片**：上传并存储在本地 `public/uploads/` 目录。
-- **部署**：提供 Dockerfile 和 docker-compose.yml。
+基于 Vue3 + Koa 的食谱管理应用，支持标签筛选、图片浏览和管理功能。
 
-### 核心布局要求 (Tailwind Grid System)
-整个页面主体使用 12 列网格布局 (`grid grid-cols-12 gap-4`)，高度占满屏幕：
-1. **左侧留白**：占据 1 列 (1/12)。
-2. **左侧栏 (列表/搜索)**：占据 2 列 (即 1/6)。
-3. **右侧栏 (详情/内容)**：占据 8 列 (剩余空间)。
-4. **右侧留白**：占据 1 列 (1/12)。
+## 本地开发
 
-### 功能模块
-页面顶部有一个简单的 Tab 切换：【查询模式】 和 【管理模式】。
+### 安装依赖
+```bash
+cd vue-app
+npm install
+```
 
-#### 1. 查询模式 (Tab 1)
-**左侧栏 (2列宽):**
-- **顶部搜索框**：
-    - 支持输入 Tag 进行筛选。
-    - 输入时支持联想/自动补全当前系统中已有的 Tag。
-    - 按回车确认 Tag，支持多 Tag 输入。
-    - 选中的 Tag 显示在输入框下方，可点击删除。
-- **食谱列表**：
-    - 位于搜索框下方，显示过滤后的食谱列表（仅显示缩略名或小图）。
-    - **筛选逻辑**：多个 Tag 之间取**交集**（必须同时包含所有选中的 Tag）。
-    - 点击列表中的一项，更新右侧栏的显示。
+### 启动开发服务器
+```bash
+npm run dev
+```
 
-**右侧栏 (8列宽):**
-- **食谱详情**：
-    - 展示当前选中食谱的大图，图片比例强制保持 **16:9** (object-cover)。
-    - 图片底部显示该食谱的所有 Tag。
-    - **交互**：点击详情页的某个 Tag，自动将该 Tag 添加到左侧的筛选条件中。
-    - 如果未选中食谱，显示提示信息。
+访问 `http://localhost:5173`
 
-#### 2. 管理模式 (Tab 2)
-**布局**：可以复用查询模式的网格，或者在中间 10 列 (2+8) 居中显示表单。
-**功能**：
-- **上传图片**：支持选择本地图片上传。
-- **编辑信息**：上传后，支持添加/删除 Tag（输入 Tag 时同样支持联想已有 Tag）。
-- **保存**：点击保存后，将图片路径和 Tags 写入 `data/recipes.json`。
-- **列表管理**：简单的列表展示，支持“编辑”和“删除”现有食谱。
+---
 
-### 后端 API 设计 (Koa)
-- `GET /api/recipes`: 读取 JSON 返回所有数据。
-- `POST /api/recipes`: 接收图片文件和 Tag 数据，保存图片，更新 JSON。
-- `DELETE /api/recipes/:id`: 删除数据和对应图片。
-- 静态资源服务：需要 serve `public/uploads` 目录以及前端 build 后的静态文件。
+## 生产部署（方式一：本地构建后部署）
 
-### 输出要求
-请提供完整的项目代码结构，包括：
-1. 后端 `server.js` (包含文件上传处理和 JSON 读写逻辑)。
-2. 前端核心组件代码 (`App.vue` 以及主要组件)。
-3. `Dockerfile` (采用多阶段构建：先 build 前端，再 copy 到 node 镜像中，确保体积最小)。
-4. `docker-compose.yml` (挂载 `data` 和 `uploads` 目录)。
+### 1. 本地构建前端
 
-请确保代码逻辑清晰，能够直接运行。
+在本地机器上执行：
+
+```bash
+cd vue-app
+npm run build
+```
+
+构建完成后会生成 `vue-app/dist/` 目录。
+
+### 2. 打包项目
+
+在项目根目录执行，排除 `node_modules`：
+
+```bash
+tar --exclude='node_modules' --exclude='vue-app/node_modules' -czf food.tar.gz backend/ vue-app/dist/ Dockerfile docker-compose.yml
+```
+
+### 3. 上传到服务器
+
+```bash
+scp food.tar.gz user@your-server:/path/to/deploy/
+```
+
+### 4. 服务器上部署
+
+SSH 登录服务器后执行：
+
+```bash
+# 解压
+tar -xzf food.tar.gz
+
+# 使用 docker-compose 构建并启动
+docker compose up -d --build
+
+# 查看运行状态
+docker compose ps
+```
+
+### 5. 访问应用
+
+默认端口为 `8092`，访问：
+
+```
+http://your-server-ip:8092
+```
+
+---
+
+## 目录结构
+
+```
+food/
+├── backend/              # 后端代码
+│   ├── server.js        # Koa 服务入口
+│   ├── package.json     # 后端依赖
+│   ├── data/            # 数据文件（服务器自动创建）
+│   └── public/          # 静态资源
+│       └── uploads/     # 上传的图片
+├── vue-app/             # 前端代码
+│   ├── src/             # 源代码
+│   └── dist/            # 构建产物
+├── Dockerfile           # Docker 镜像配置
+└── docker-compose.yml   # 容器编排配置
+```
+
+---
+
+## 常用命令
+
+### 查看日志
+```bash
+docker compose logs -f
+```
+
+### 重启服务
+```bash
+docker compose restart
+```
+
+### 停止服务
+```bash
+docker compose down
+```
+
+### 备份数据
+```bash
+# 备份数据文件和上传的图片
+tar -czf backup.tar.gz backend/data/ backend/public/uploads/
+```

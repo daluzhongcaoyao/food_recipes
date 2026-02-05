@@ -22,7 +22,8 @@
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(dir:*)"
     ]
   }
 }
