@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import RecipeCard from './RecipeCard.vue'
 
 const props = defineProps({
   allTags: { type: Array, default: () => [] },
@@ -212,30 +213,14 @@ const deleteRecipe = async (id) => {
     <!-- Management List Section -->
     <div class="border-t md:border-t-0 md:border-l border-gray-200 pl-0 md:pl-16 py-8 flex flex-col">
       <h2 class="text-2xl font-bold mb-8 text-gray-800 text-center">已有食谱管理</h2>
-      <ul class="divide-y">
-        <li v-for="recipe in recipes" :key="recipe.id" class="py-3 flex justify-between items-center group">
-          <div class="flex items-center gap-3 overflow-hidden">
-            <img 
-              :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`" 
-              class="w-10 h-10 rounded object-cover bg-gray-200"
-            >
-            <span class="truncate">{{ recipe.title }}</span>
-          </div>
-          <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              @click="editRecipe(recipe)"
-              class="text-blue-500 text-sm hover:text-blue-700"
-            >
-              编辑
-            </button>
-            <span class="text-gray-300">|</span>
-            <button
-              @click="deleteRecipe(recipe.id)"
-              class="text-red-500 text-sm hover:text-red-700"
-            >
-              删除
-            </button>
-          </div>
+      <ul class="flex flex-col gap-3">
+        <li v-for="recipe in recipes" :key="recipe.id">
+          <RecipeCard
+            :recipe="recipe"
+            :show-actions="true"
+            @edit="editRecipe"
+            @delete="deleteRecipe"
+          />
         </li>
       </ul>
     </div>

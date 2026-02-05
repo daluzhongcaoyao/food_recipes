@@ -1,16 +1,12 @@
 <script setup>
+import RecipeCard from './RecipeCard.vue'
+
 const props = defineProps({
   recipes: { type: Array, default: () => [] },
   selectedId: { type: String, default: null }
 })
 
 const emit = defineEmits(['select', 'image-click'])
-
-const handleImageClick = (e, recipe) => {
-  e.stopPropagation()
-  const imageUrl = recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`
-  emit('image-click', imageUrl)
-}
 </script>
 
 <template>
@@ -19,26 +15,13 @@ const handleImageClick = (e, recipe) => {
       没有找到食谱
     </div>
     <ul v-else class="flex flex-col gap-3 p-1 pb-4">
-      <li 
-        v-for="recipe in recipes" 
-        :key="recipe.id"
-        @click="emit('select', recipe)"
-        :class="['p-3 cursor-pointer transition-all duration-200 flex items-center gap-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md', 
-          selectedId === recipe.id ? 'ring-2 ring-blue-500 ring-offset-2' : 'hover:border-blue-200']"
-      >
-        <div class="w-12 h-12 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
-          <img
-            v-if="recipe.image"
-            :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`"
-            class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-            alt=""
-            @click="handleImageClick($event, recipe)"
-          >
-        </div>
-        <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-bold text-gray-800 truncate mb-0.5">{{ recipe.title }}</h3>
-          <p class="text-xs text-gray-500 truncate">{{ recipe.tags.join(', ') }}</p>
-        </div>
+      <li v-for="recipe in recipes" :key="recipe.id">
+        <RecipeCard
+          :recipe="recipe"
+          :is-selected="selectedId === recipe.id"
+          @click="emit('select', $event)"
+          @image-click="emit('image-click', $event)"
+        />
       </li>
     </ul>
   </div>
