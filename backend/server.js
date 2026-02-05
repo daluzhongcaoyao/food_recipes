@@ -10,8 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 const app = new Koa();
 const router = new Router();
 
-const DATA_FILE = path.join(__dirname, '..', 'food_data', 'recipes.json');
-const UPLOAD_DIR = path.join(__dirname, '..', 'food_data', 'img');
+const DATA_FILE = path.join(__dirname, 'food_data', 'recipes.json');
+const UPLOAD_DIR = path.join(__dirname, 'food_data', 'img');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '123456';
 
 // Ensure directories exist
@@ -36,13 +36,21 @@ app.use(serve(path.join(__dirname, 'public'), {
 // Serve images from food_data/img with long cache
 app.use(async (ctx, next) => {
     if (ctx.path.startsWith('/img/')) {
-        const serve = require('koa-static');
-        return serve(path.join(__dirname, '..', 'food_data', 'img'), {
+        const originalPath = ctx.path;
+        // Strip /img prefix so koa-static looks for the file relative to the root
+        ctx.path = ctx.path.substring(4);
+        
+        await serve(path.join(__dirname, 'food_data', 'img'), {
             maxage: 365 * 24 * 60 * 60 * 1000, // 1 year
             setHeaders: (res) => {
                 res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             }
-        })(ctx, next);
+        })(ctx, async () => {
+            // Restore path if file not found and continue to next middleware
+            ctx.path = originalPath;
+            await next();
+        });
+        return;
     }
     return next();
 });
@@ -165,7 +173,7 @@ router.put('/api/recipes/:id', verifyPassword, async (ctx) => {
 
     // Delete old image and save new one if provided
     if (file) {
-        const oldPath = path.join(__dirname, '..', 'food_data', 'img', path.basename(recipe.image));
+        const oldPath = path.join(__dirname, 'food_data', 'img', path.basename(recipe.image));
         if (fs.existsSync(oldPath)) {
             try {
                 fs.unlinkSync(oldPath);
@@ -215,7 +223,7 @@ router.delete('/api/recipes/:id', verifyPassword, async (ctx) => {
     
     // Delete image file if it exists
     if (recipe.image) {
-        const imagePath = path.join(__dirname, '..', 'food_data', 'img', path.basename(recipe.image));
+        const imagePath = path.join(__dirname, 'food_data', 'img', path.basename(recipe.image));
         if (fs.existsSync(imagePath)) {
             try {
                 fs.unlinkSync(imagePath);

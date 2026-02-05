@@ -23,7 +23,8 @@
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
       "Bash(timeout:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }
