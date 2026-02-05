@@ -2,13 +2,34 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import RecipeCard from './RecipeCard.vue'
+import SearchBar from './SearchBar.vue'
+import { API_BASE } from '../config/api'
 
 const props = defineProps({
   allTags: { type: Array, default: () => [] },
   recipes: { type: Array, default: () => [] }
 })
 
+const selectedTags = ref([])
+
 const emit = defineEmits(['refresh'])
+
+const filteredRecipes = computed(() => {
+  if (selectedTags.value.length === 0) return props.recipes
+  return props.recipes.filter(recipe => {
+    return selectedTags.value.every(tag => recipe.tags.includes(tag))
+  })
+})
+
+const addTagFilter = (tag) => {
+  if (!selectedTags.value.includes(tag)) {
+    selectedTags.value.push(tag)
+  }
+}
+
+const removeTagFilter = (tag) => {
+  selectedTags.value = selectedTags.value.filter(t => t !== tag)
+}
 
 const title = ref('')
 const newTag = ref('')
@@ -56,7 +77,7 @@ const editRecipe = (recipe) => {
   editingId.value = recipe.id
   title.value = recipe.title
   tags.value = [...recipe.tags]
-  previewUrl.value = recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`
+  previewUrl.value = recipe.image
   file.value = null
 }
 
@@ -89,11 +110,11 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   try {
     if (editingId.value) {
-      await axios.put(`http://localhost:3000/api/recipes/${editingId.value}`, formData, {
+      await axios.put(`${API_BASE}/recipes/${editingId.value}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
     } else {
-      await axios.post('http://localhost:3000/api/recipes', formData, {
+      await axios.post(`${API_BASE}/recipes`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
     }
@@ -111,9 +132,9 @@ const handleSubmit = async () => {
 
 const deleteRecipe = async (id) => {
   if (!confirm('确定要删除这个食谱吗？')) return
-  
+
   try {
-    await axios.delete(`http://localhost:3000/api/recipes/${id}`)
+    await axios.delete(`${API_BASE}/recipes/${id}`)
     emit('refresh')
   } catch (error) {
     alert('删除失败')
@@ -212,9 +233,20 @@ const deleteRecipe = async (id) => {
 
     <!-- Management List Section -->
     <div class="border-t md:border-t-0 md:border-l border-gray-200 pl-0 md:pl-16 py-8 flex flex-col">
-      <h2 class="text-2xl font-bold mb-8 text-gray-800 text-center">已有食谱管理</h2>
+      <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">已有食谱管理</h2>
+
+      <!-- Search Bar -->
+      <div class="mb-4">
+        <SearchBar
+          :all-tags="allTags"
+          :selected-tags="selectedTags"
+          @add-tag="addTagFilter"
+          @remove-tag="removeTagFilter"
+        />
+      </div>
+
       <ul class="flex flex-col gap-3">
-        <li v-for="recipe in recipes" :key="recipe.id">
+        <li v-for="recipe in filteredRecipes" :key="recipe.id">
           <RecipeCard
             :recipe="recipe"
             :show-actions="true"

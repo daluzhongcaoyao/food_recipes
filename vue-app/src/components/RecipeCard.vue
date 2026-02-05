@@ -13,10 +13,7 @@ const handleClick = () => {
 
 const handleImageClick = (e) => {
   e.stopPropagation()
-  const imageUrl = props.recipe.image.startsWith('http')
-    ? props.recipe.image
-    : `http://localhost:3000${props.recipe.image}`
-  emit('image-click', imageUrl)
+  emit('image-click', props.recipe.image)
 }
 
 const handleEdit = (e) => {
@@ -45,7 +42,7 @@ const handleDelete = (e) => {
       <div class="w-12 h-12 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
         <img
           v-if="recipe.image"
-          :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`"
+          :src="recipe.image"
           class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
           alt=""
           @click="handleImageClick"

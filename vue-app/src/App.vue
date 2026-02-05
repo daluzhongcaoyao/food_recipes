@@ -7,6 +7,7 @@ import RecipeDetail from './components/RecipeDetail.vue'
 import AdminForm from './components/AdminForm.vue'
 import ImageViewer from './components/ImageViewer.vue'
 import MobileImageViewer from './components/MobileImageViewer.vue'
+import { API_BASE } from './config/api'
 
 const currentTab = ref('search') // 'search' or 'admin'
 const recipes = ref([])
@@ -14,8 +15,6 @@ const selectedRecipe = ref(null)
 const selectedTags = ref([])
 const enlargedImageUrl = ref(null)
 const isMobile = ref(false)
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api'
 
 // Check if device is mobile
 const checkMobile = () => {
@@ -65,10 +64,7 @@ const openImage = (imageUrl) => {
 
 // Handle mobile recipe name click - show image fullscreen
 const handleMobileRecipeClick = (recipe) => {
-  const imageUrl = recipe.image.startsWith('http')
-    ? recipe.image
-    : `http://localhost:3000${recipe.image}`
-  openImage(imageUrl)
+  openImage(recipe.image)
 }
 
 const closeImage = () => {
