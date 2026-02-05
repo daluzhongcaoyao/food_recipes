@@ -26,10 +26,9 @@ pnpm-debug.log*
 *.sw?
 
 # Backend Data & Uploads
-backend/data/*.json
-backend/public/uploads/*
-!backend/public/uploads/.gitkeep
-!backend/data/.gitkeep
+food_data/*.json
+food_data/img/*
+!food_data/img/.gitkeep
 
 # Build outputs
 dist/

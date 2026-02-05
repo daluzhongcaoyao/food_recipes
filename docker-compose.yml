@@ -7,8 +7,7 @@ services:
     ports:
       - "8092:3000"
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/public/uploads:/app/public/uploads
+      - ./food_data:/app/food_data
     environment:
       - NODE_ENV=production
       - ADMIN_PASSWORD=123456

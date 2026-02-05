@@ -10,8 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 const app = new Koa();
 const router = new Router();
 
-const DATA_FILE = path.join(__dirname, 'data', 'recipes.json');
-const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
+const DATA_FILE = path.join(__dirname, '..', 'food_data', 'recipes.json');
+const UPLOAD_DIR = path.join(__dirname, '..', 'food_data', 'img');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '123456';
 
 // Ensure directories exist
@@ -30,14 +30,22 @@ app.use(cors());
 
 // Serve static files with long cache (1 year) - JS/CSS have hash in filename
 app.use(serve(path.join(__dirname, 'public'), {
-    maxage: 365 * 24 * 60 * 60 * 1000, // 1 year
-    setHeaders: (res, path) => {
-        // Only cache uploaded images, not other files
-        if (path.includes('/uploads/')) {
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        }
-    }
+    maxage: 365 * 24 * 60 * 60 * 1000 // 1 year
 }));
+
+// Serve images from food_data/img with long cache
+app.use(async (ctx, next) => {
+    if (ctx.path.startsWith('/img/')) {
+        const serve = require('koa-static');
+        return serve(path.join(__dirname, '..', 'food_data', 'img'), {
+            maxage: 365 * 24 * 60 * 60 * 1000, // 1 year
+            setHeaders: (res) => {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            }
+        })(ctx, next);
+    }
+    return next();
+});
 
 app.use(serve(path.join(__dirname, 'dist'), {
     maxage: 365 * 24 * 60 * 60 * 1000 // 1 year for JS/CSS with hash
@@ -120,7 +128,7 @@ router.post('/api/recipes', verifyPassword, async (ctx) => {
     const newRecipe = {
         id,
         title,
-        image: `/uploads/${imageName}`,
+        image: `/img/${imageName}`,
         tags: parsedTags,
         createdAt: new Date().toISOString()
     };
@@ -157,7 +165,7 @@ router.put('/api/recipes/:id', verifyPassword, async (ctx) => {
 
     // Delete old image and save new one if provided
     if (file) {
-        const oldPath = path.join(__dirname, 'public', recipe.image.replace(/^\//, ''));
+        const oldPath = path.join(__dirname, '..', 'food_data', 'img', path.basename(recipe.image));
         if (fs.existsSync(oldPath)) {
             try {
                 fs.unlinkSync(oldPath);
@@ -165,7 +173,7 @@ router.put('/api/recipes/:id', verifyPassword, async (ctx) => {
                 console.error('Failed to delete old image:', err);
             }
         }
-        imagePath = `/uploads/${path.basename(file.filepath)}`;
+        imagePath = `/img/${path.basename(file.filepath)}`;
     }
 
     // Parse tags
@@ -207,7 +215,7 @@ router.delete('/api/recipes/:id', verifyPassword, async (ctx) => {
     
     // Delete image file if it exists
     if (recipe.image) {
-        const imagePath = path.join(__dirname, 'public', recipe.image.replace(/^\//, ''));
+        const imagePath = path.join(__dirname, '..', 'food_data', 'img', path.basename(recipe.image));
         if (fs.existsSync(imagePath)) {
             try {
                 fs.unlinkSync(imagePath);

@@ -13,7 +13,7 @@ COPY backend/ .
 COPY vue-app/dist ./dist
 
 # Create data directories
-RUN mkdir -p data public/uploads
+RUN mkdir -p food_data food_data/img
 
 # Expose port
 EXPOSE 3000
