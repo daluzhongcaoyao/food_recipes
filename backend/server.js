@@ -27,8 +27,21 @@ if (!fs.existsSync(DATA_FILE)) {
 
 // Middleware
 app.use(cors());
-app.use(serve(path.join(__dirname, 'public'))); // Serve uploaded images
-app.use(serve(path.join(__dirname, 'dist')));   // Serve frontend build
+
+// Serve static files with long cache (1 year) - JS/CSS have hash in filename
+app.use(serve(path.join(__dirname, 'public'), {
+    maxage: 365 * 24 * 60 * 60 * 1000, // 1 year
+    setHeaders: (res, path) => {
+        // Only cache uploaded images, not other files
+        if (path.includes('/uploads/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+    }
+}));
+
+app.use(serve(path.join(__dirname, 'dist'), {
+    maxage: 365 * 24 * 60 * 60 * 1000 // 1 year for JS/CSS with hash
+}));
 
 app.use(koaBody({
     multipart: true,
@@ -70,6 +83,10 @@ const verifyPassword = async (ctx, next) => {
 
 // GET /api/recipes - Get all recipes
 router.get('/api/recipes', async (ctx) => {
+    // Disable caching for API to ensure real-time data
+    ctx.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    ctx.set('Pragma', 'no-cache');
+    ctx.set('Expires', '0');
     ctx.body = readData();
 });
 
@@ -211,6 +228,10 @@ router.get('(.*)', async (ctx) => {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     if (fs.existsSync(indexPath)) {
         ctx.type = 'html';
+        // Disable caching for index.html to ensure updates are loaded
+        ctx.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        ctx.set('Pragma', 'no-cache');
+        ctx.set('Expires', '0');
         ctx.body = fs.createReadStream(indexPath);
     } else {
         ctx.status = 404;
