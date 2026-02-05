@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import RecipeCard from './RecipeCard.vue'
 import SearchBar from './SearchBar.vue'
@@ -13,6 +13,39 @@ const props = defineProps({
 const selectedTags = ref([])
 
 const emit = defineEmits(['refresh'])
+
+// Password management
+const PASSWORD_KEY = 'food_app_admin_password'
+const isLoggedIn = ref(false)
+const savedPassword = ref('')
+
+// Check for saved password on mount
+onMounted(() => {
+  const stored = localStorage.getItem(PASSWORD_KEY)
+  if (stored) {
+    savedPassword.value = stored
+    isLoggedIn.value = true
+  }
+})
+
+const savePassword = (password) => {
+  localStorage.setItem(PASSWORD_KEY, password)
+  savedPassword.value = password
+  isLoggedIn.value = true
+}
+
+const clearPassword = () => {
+  localStorage.removeItem(PASSWORD_KEY)
+  savedPassword.value = ''
+  isLoggedIn.value = false
+}
+
+const logout = () => {
+  if (confirm('确定要退出登录吗？')) {
+    clearPassword()
+    cancelEdit()
+  }
+}
 
 const filteredRecipes = computed(() => {
   if (selectedTags.value.length === 0) return props.recipes
@@ -100,6 +133,15 @@ const handleSubmit = async () => {
     return
   }
 
+  // Get password - use saved or prompt for new one
+  let password = savedPassword.value
+  if (!password) {
+    password = prompt('请输入管理密码：')
+    if (!password) {
+      return
+    }
+  }
+
   const formData = new FormData()
   formData.append('title', title.value)
   formData.append('tags', JSON.stringify(tags.value))
@@ -109,14 +151,22 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
   try {
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-Admin-Password': password
+      }
+    }
+
     if (editingId.value) {
-      await axios.put(`${API_BASE}/recipes/${editingId.value}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      await axios.put(`${API_BASE}/recipes/${editingId.value}`, formData, config)
     } else {
-      await axios.post(`${API_BASE}/recipes`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      await axios.post(`${API_BASE}/recipes`, formData, config)
+    }
+
+    // Save password if not already saved
+    if (!isLoggedIn.value) {
+      savePassword(password)
     }
 
     cancelEdit()
@@ -124,7 +174,13 @@ const handleSubmit = async () => {
     alert(editingId.value ? '更新成功！' : '保存成功！')
   } catch (error) {
     console.error(error)
-    alert('保存失败')
+    if (error.response?.status === 401) {
+      // Clear invalid password and prompt again
+      clearPassword()
+      alert('密码错误，请重试')
+    } else {
+      alert('保存失败')
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -133,11 +189,35 @@ const handleSubmit = async () => {
 const deleteRecipe = async (id) => {
   if (!confirm('确定要删除这个食谱吗？')) return
 
+  // Get password - use saved or prompt for new one
+  let password = savedPassword.value
+  if (!password) {
+    password = prompt('请输入管理密码：')
+    if (!password) {
+      return
+    }
+  }
+
   try {
-    await axios.delete(`${API_BASE}/recipes/${id}`)
+    await axios.delete(`${API_BASE}/recipes/${id}`, {
+      headers: { 'X-Admin-Password': password }
+    })
+
+    // Save password if not already saved
+    if (!isLoggedIn.value) {
+      savePassword(password)
+    }
+
     emit('refresh')
+    alert('删除成功！')
   } catch (error) {
-    alert('删除失败')
+    if (error.response?.status === 401) {
+      // Clear invalid password and prompt again
+      clearPassword()
+      alert('密码错误，请重试')
+    } else {
+      alert('删除失败')
+    }
   }
 }
 </script>
@@ -146,9 +226,21 @@ const deleteRecipe = async (id) => {
   <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 min-h-full">
     <!-- Form Section -->
     <div class="flex flex-col py-8">
-      <h2 class="text-2xl font-bold mb-8 text-gray-800 text-center">
-        {{ editingId ? '编辑食谱' : '添加新食谱' }}
-      </h2>
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 text-center flex-1">
+          {{ editingId ? '编辑食谱' : '添加新食谱' }}
+        </h2>
+        <button
+          v-if="isLoggedIn"
+          @click="logout"
+          class="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+        >
+          退出登录
+        </button>
+        <div v-else class="px-4 py-2 text-sm bg-gray-100 text-gray-600 rounded-md">
+          未登录
+        </div>
+      </div>
       
       <div class="space-y-4">
         <!-- Image Upload -->

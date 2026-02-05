@@ -11,3 +11,4 @@ services:
       - ./backend/public/uploads:/app/public/uploads
     environment:
       - NODE_ENV=production
+      - ADMIN_PASSWORD=123456

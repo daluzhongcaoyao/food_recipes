@@ -12,6 +12,7 @@ const router = new Router();
 
 const DATA_FILE = path.join(__dirname, 'data', 'recipes.json');
 const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '123456';
 
 // Ensure directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -54,6 +55,17 @@ const writeData = (data) => {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 };
 
+// Middleware to verify password
+const verifyPassword = async (ctx, next) => {
+    const password = ctx.request.headers['x-admin-password'];
+    if (!password || password !== ADMIN_PASSWORD) {
+        ctx.status = 401;
+        ctx.body = { error: 'Unauthorized: invalid or missing password' };
+        return;
+    }
+    await next();
+};
+
 // Routes
 
 // GET /api/recipes - Get all recipes
@@ -62,7 +74,7 @@ router.get('/api/recipes', async (ctx) => {
 });
 
 // POST /api/recipes - Create new recipe with image
-router.post('/api/recipes', async (ctx) => {
+router.post('/api/recipes', verifyPassword, async (ctx) => {
     const { title, tags } = ctx.request.body;
     const file = ctx.request.files ? ctx.request.files.image : null;
 
@@ -103,7 +115,7 @@ router.post('/api/recipes', async (ctx) => {
 });
 
 // PUT /api/recipes/:id - Update recipe
-router.put('/api/recipes/:id', async (ctx) => {
+router.put('/api/recipes/:id', verifyPassword, async (ctx) => {
     const { id } = ctx.params;
     const { title, tags } = ctx.request.body;
     const file = ctx.request.files ? ctx.request.files.image : null;
@@ -163,7 +175,7 @@ router.put('/api/recipes/:id', async (ctx) => {
 });
 
 // DELETE /api/recipes/:id - Delete recipe and image
-router.delete('/api/recipes/:id', async (ctx) => {
+router.delete('/api/recipes/:id', verifyPassword, async (ctx) => {
     const { id } = ctx.params;
     let recipes = readData();
     const recipeIndex = recipes.findIndex(r => r.id === id);
