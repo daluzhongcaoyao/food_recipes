@@ -1,0 +1,202 @@
+<script setup>
+import { ref, computed } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  allTags: { type: Array, default: () => [] },
+  recipes: { type: Array, default: () => [] }
+})
+
+const emit = defineEmits(['refresh'])
+
+const title = ref('')
+const newTag = ref('')
+const tags = ref([])
+const file = ref(null)
+const previewUrl = ref(null)
+const isSubmitting = ref(false)
+
+const suggestedTags = computed(() => {
+  if (!newTag.value) return []
+  return props.allTags.filter(t => 
+    t.toLowerCase().includes(newTag.value.toLowerCase()) && 
+    !tags.value.includes(t)
+  )
+})
+
+const handleFileChange = (event) => {
+  const selectedFile = event.target.files[0]
+  if (selectedFile) {
+    file.value = selectedFile
+    previewUrl.value = URL.createObjectURL(selectedFile)
+  }
+}
+
+const addTag = () => {
+  if (newTag.value && !tags.value.includes(newTag.value)) {
+    tags.value.push(newTag.value)
+    newTag.value = ''
+  }
+}
+
+const removeTag = (tag) => {
+  tags.value = tags.value.filter(t => t !== tag)
+}
+
+const selectSuggestedTag = (tag) => {
+  if (!tags.value.includes(tag)) {
+    tags.value.push(tag)
+    newTag.value = ''
+  }
+}
+
+const handleSubmit = async () => {
+  if (!title.value || !file.value) {
+    alert('请填写标题并上传图片')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('title', title.value)
+  // Send tags as JSON string
+  formData.append('tags', JSON.stringify(tags.value))
+  formData.append('image', file.value)
+
+  isSubmitting.value = true
+  try {
+    await axios.post('http://localhost:3000/api/recipes', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    // Reset form
+    title.value = ''
+    tags.value = []
+    file.value = null
+    previewUrl.value = null
+    newTag.value = ''
+    
+    emit('refresh')
+    alert('保存成功！')
+  } catch (error) {
+    console.error(error)
+    alert('保存失败')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const deleteRecipe = async (id) => {
+  if (!confirm('确定要删除这个食谱吗？')) return
+  
+  try {
+    await axios.delete(`http://localhost:3000/api/recipes/${id}`)
+    emit('refresh')
+  } catch (error) {
+    alert('删除失败')
+  }
+}
+</script>
+
+<template>
+  <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Form Section -->
+    <div>
+      <h2 class="text-xl font-bold mb-6">添加新食谱</h2>
+      
+      <div class="space-y-4">
+        <!-- Image Upload -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500 transition-colors"
+             @click="$refs.fileInput.click()">
+          <input 
+            ref="fileInput"
+            type="file" 
+            accept="image/*" 
+            class="hidden" 
+            @change="handleFileChange"
+          >
+          <div v-if="previewUrl" class="relative pt-[56.25%] w-full bg-gray-100 rounded overflow-hidden">
+            <img :src="previewUrl" class="absolute top-0 left-0 w-full h-full object-cover">
+          </div>
+          <div v-else class="py-8 text-gray-500">
+            <p>点击上传图片</p>
+          </div>
+        </div>
+
+        <!-- Title Input -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">食谱名称</label>
+          <input 
+            v-model="title"
+            type="text" 
+            class="w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          >
+        </div>
+
+        <!-- Tag Input -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+          <div class="flex flex-wrap gap-2 mb-2">
+            <span 
+              v-for="tag in tags" 
+              :key="tag"
+              class="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center"
+            >
+              {{ tag }}
+              <button @click="removeTag(tag)" class="ml-1 text-blue-600 font-bold">&times;</button>
+            </span>
+          </div>
+          <div class="relative">
+            <input 
+              v-model="newTag"
+              type="text" 
+              class="w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              placeholder="输入标签按回车添加..."
+              @keydown.enter.prevent="addTag"
+            >
+            <!-- Tag Suggestions -->
+            <ul v-if="suggestedTags.length > 0" class="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1 max-h-32 overflow-y-auto">
+              <li 
+                v-for="tag in suggestedTags" 
+                :key="tag"
+                class="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                @mousedown.prevent="selectSuggestedTag(tag)"
+              >
+                {{ tag }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <button 
+          @click="handleSubmit"
+          :disabled="isSubmitting"
+          class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+        >
+          {{ isSubmitting ? '保存中...' : '保存食谱' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Management List Section -->
+    <div class="border-t md:border-t-0 md:border-l pl-0 md:pl-8 pt-8 md:pt-0">
+      <h2 class="text-xl font-bold mb-6">已有食谱管理</h2>
+      <ul class="divide-y">
+        <li v-for="recipe in recipes" :key="recipe.id" class="py-3 flex justify-between items-center group">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <img 
+              :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`" 
+              class="w-10 h-10 rounded object-cover bg-gray-200"
+            >
+            <span class="truncate">{{ recipe.title }}</span>
+          </div>
+          <button 
+            @click="deleteRecipe(recipe.id)"
+            class="text-red-500 text-sm hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            删除
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>

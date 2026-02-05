@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Backend Data & Uploads
+backend/data/*.json
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+!backend/data/.gitkeep
+
+# Build outputs
+dist/
+dist-ssr/
+coverage/
+
+# Docker
+.docker/
+.claude/

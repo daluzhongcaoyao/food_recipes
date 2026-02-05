@@ -1,8 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm create vite:*)",
-      "Bash(npm install:*)"
+      "Bash(findstr:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(done:*)",
+      "Bash(python:*)",
+      "Bash(copy:*)",
+      "Bash(npm start)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
