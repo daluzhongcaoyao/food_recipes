@@ -4,7 +4,13 @@ const props = defineProps({
   selectedId: { type: String, default: null }
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'image-click'])
+
+const handleImageClick = (e, recipe) => {
+  e.stopPropagation()
+  const imageUrl = recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`
+  emit('image-click', imageUrl)
+}
 </script>
 
 <template>
@@ -21,11 +27,12 @@ const emit = defineEmits(['select'])
           selectedId === recipe.id ? 'ring-2 ring-blue-500 ring-offset-2' : 'hover:border-blue-200']"
       >
         <div class="w-12 h-12 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
-          <img 
-            v-if="recipe.image" 
-            :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`" 
-            class="w-full h-full object-cover"
+          <img
+            v-if="recipe.image"
+            :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`"
+            class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
             alt=""
+            @click="handleImageClick($event, recipe)"
           >
         </div>
         <div class="flex-1 min-w-0">

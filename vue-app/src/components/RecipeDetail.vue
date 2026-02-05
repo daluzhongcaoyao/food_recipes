@@ -3,7 +3,15 @@ const props = defineProps({
   recipe: { type: Object, default: null }
 })
 
-const emit = defineEmits(['tag-click'])
+const emit = defineEmits(['tag-click', 'image-click'])
+
+const handleImageClick = () => {
+  if (!props.recipe?.image) return
+  const imageUrl = props.recipe.image.startsWith('http')
+    ? props.recipe.image
+    : `http://localhost:3000${props.recipe.image}`
+  emit('image-click', imageUrl)
+}
 </script>
 
 <template>
@@ -16,10 +24,11 @@ const emit = defineEmits(['tag-click'])
     <!-- Body: Image Container -->
     <!-- Added max-h-[70%] to ensure image doesn't take up too much vertical space -->
     <div class="flex-1 min-h-0 w-full bg-gray-100 rounded-xl overflow-hidden shadow-sm mb-4 relative flex items-center justify-center max-h-[70%]">
-      <img 
-        :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`" 
-        class="max-w-full max-h-full object-contain"
+      <img
+        :src="recipe.image.startsWith('http') ? recipe.image : `http://localhost:3000${recipe.image}`"
+        class="max-w-full max-h-full object-contain cursor-pointer hover:opacity-95 transition-opacity"
         :alt="recipe.title"
+        @click="handleImageClick"
       >
     </div>
 

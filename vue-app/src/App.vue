@@ -1,15 +1,17 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import SearchBar from './components/SearchBar.vue'
 import RecipeList from './components/RecipeList.vue'
 import RecipeDetail from './components/RecipeDetail.vue'
 import AdminForm from './components/AdminForm.vue'
+import ImageViewer from './components/ImageViewer.vue'
 
 const currentTab = ref('search') // 'search' or 'admin'
 const recipes = ref([])
 const selectedRecipe = ref(null)
 const selectedTags = ref([])
+const enlargedImageUrl = ref(null)
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api'
 
@@ -49,7 +51,28 @@ const removeTagFilter = (tag) => {
   selectedTags.value = selectedTags.value.filter(t => t !== tag)
 }
 
-onMounted(fetchRecipes)
+const openImage = (imageUrl) => {
+  enlargedImageUrl.value = imageUrl
+}
+
+const closeImage = () => {
+  enlargedImageUrl.value = null
+}
+
+const handleKeydown = (e) => {
+  if (e.key === 'Escape') {
+    closeImage()
+  }
+}
+
+onMounted(() => {
+  fetchRecipes()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -106,19 +129,21 @@ onMounted(fetchRecipes)
               />
             </div>
             <div class="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
-              <RecipeList 
-                :recipes="filteredRecipes" 
+              <RecipeList
+                :recipes="filteredRecipes"
                 :selected-id="selectedRecipe?.id"
-                @select="selectRecipe" 
+                @select="selectRecipe"
+                @image-click="openImage"
               />
             </div>
           </div>
 
           <!-- Right Content: Detail (9 cols) -->
           <div class="col-span-12 md:col-span-8 lg:col-span-9 bg-white rounded-xl shadow-sm border border-gray-100 h-full overflow-hidden">
-            <RecipeDetail 
-              :recipe="selectedRecipe" 
+            <RecipeDetail
+              :recipe="selectedRecipe"
               @tag-click="addTagFilter"
+              @image-click="openImage"
             />
           </div>
         </template>
@@ -136,5 +161,11 @@ onMounted(fetchRecipes)
 
       </div>
     </main>
+
+    <!-- Image Viewer -->
+    <ImageViewer
+      :image-url="enlargedImageUrl"
+      @close="closeImage"
+    />
   </div>
 </template>
